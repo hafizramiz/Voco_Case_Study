@@ -1,10 +1,14 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:voco_case_study/feature/login_view_controller.dart';
+import 'package:voco_case_study/feature/home/home_view.dart';
+import 'package:voco_case_study/feature/login/login_view_controller.dart';
 import 'package:voco_case_study/product/constants/icon_constants.dart';
+import 'package:voco_case_study/product/constants/regex_validation.dart';
 import 'package:voco_case_study/product/constants/string_constants.dart';
 
-import '../product/constants/color_constants.dart';
+import '../../product/common/error_dialog.dart';
+import '../../product/constants/color_constants.dart';
 
 class LoginView extends ConsumerStatefulWidget {
   const LoginView({super.key});
@@ -20,15 +24,20 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    print("build");
-    ref.listen(loginProvider, (previous, next) {
-       Text("data");
-      print("state bilgim: ${previous.toString()}");
+    print("build calisti");
+    ref.listen<LoginState>(loginProvider, (previous, next) {
+      if (next.error != null) {
+        ErrorDialog.show(context, "${next.error}");
+      }else{
+        Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeView()),
+              );
+      }
     });
 
     return Scaffold(
         body: Form(
-            autovalidateMode: AutovalidateMode.onUserInteraction,
             key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -44,6 +53,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextFormField(
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     decoration: InputDecoration(
                         hintText: "Email",
                         prefixIcon: Icon(Icons.email),
@@ -51,41 +61,48 @@ class _LoginViewState extends ConsumerState<LoginView> {
                           borderRadius: BorderRadius.circular(10),
                         )),
                     controller: _emailController,
-                   // autovalidateMode: AutovalidateMode.always,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter some text';
-                      } else if (value.length < 5) {
-                        return "Name should be at least 5 character";
+                        return 'Please enter your email';
+                      } else {
+                        return value.isValidEmail() ? null : "Check your email";
                       }
-                      return null;
                     },
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: TextFormField(
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     decoration: InputDecoration(
                         hintText: "Password",
                         prefixIcon: Icon(IconConstants.password),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         )),
-                    autovalidateMode: AutovalidateMode.always,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter some text';
-                      } else if (value.length < 5) {
-                        return "Name should be at least 4 character";
+                      } else if (value.length < 6) {
+                        return "Password should be at least 6 character";
                       }
                       return null;
                     },
                     controller: _passwordController,
                   ),
                 ),
+                SizedBox(height: 20,),
                 ElevatedButton(
-                  onPressed: () {
-                    print("on press called");
+                  onPressed:  () {
+                    if (_formKey.currentState!.validate()) {
+                      print("validate basarili");
+                      ref
+                          .read(loginProvider.notifier)
+                          .logInWithEmailAndPassword(
+                          _emailController.text,
+                          _passwordController.text);
+                      print("Error var mi: ${ref.watch(loginProvider).error}");
+                    }
                   },
                   child: Text(
                     StringConstants.login,
@@ -94,10 +111,9 @@ class _LoginViewState extends ConsumerState<LoginView> {
                         .headlineSmall
                         ?.copyWith(color: ColorConstants.black),
                   ),
-                )
+                ),
+
               ],
             )));
   }
 }
-
-
